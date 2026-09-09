@@ -1,8 +1,8 @@
 # Voxos
 
-Voxos is a Discord text-to-speech utility for Nobara Linux and KDE Plasma. It
-provides a focused prompt, local playback through the active audio output, and
-a PipeWire virtual microphone that Discord can use.
+Voxos is a text-to-speech utility for Linux. It provides a focused prompt, 
+local playback through the active audio output, and a PipeWire 
+virtual microphone that Discord can use.
 
 ## AI Assistance
 
