@@ -1,8 +1,10 @@
 # Voxos
 
-Voxos is a text-to-speech utility for Linux. It provides a focused prompt, 
-local playback through the active audio output, and a PipeWire 
-virtual microphone that Discord can use.
+Voxos is a text-to-speech utility for Linux. It provides a focused prompt,
+local playback through the active audio output, and a PipeWire virtual
+microphone that Discord can use.
+
+![Voxos prompt interface](assets/voxos-prompt.png)
 
 ## AI Assistance
 
@@ -38,6 +40,7 @@ Pitch: -18Hz
 ~/Projects/Voxos/
 ├── assets/
 │   ├── voxos.svg
+│   ├── voxos-prompt.png
 │   └── voxos-tray.svg
 ├── scripts/
 │   └── voxos-audio
