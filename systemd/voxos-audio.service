@@ -1,0 +1,13 @@
+[Unit]
+Description=Voxos virtual audio devices
+After=pipewire.service pipewire-pulse.service
+Wants=pipewire.service pipewire-pulse.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=%h/.local/bin/voxos-audio start
+ExecStop=%h/.local/bin/voxos-audio stop
+
+[Install]
+WantedBy=default.target

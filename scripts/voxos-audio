@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -e
+
+RUNDIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+STATE="$RUNDIR/voxos-audio.modules"
+
+case "${1:-}" in
+  start)
+    rm -f "$STATE"
+
+    SINK_ID=$(pactl load-module module-null-sink \
+      sink_name=voxos_output \
+      sink_properties=device.description="Voxos Output")
+
+    SOURCE_ID=$(pactl load-module module-remap-source \
+      master=voxos_output.monitor \
+      source_name=voxos_mic \
+      source_properties=device.description="Voxos Microphone")
+
+    printf '%s\n%s\n' "$SOURCE_ID" "$SINK_ID" > "$STATE"
+    ;;
+
+  stop)
+    if [ -f "$STATE" ]; then
+      while read -r MODULE_ID; do
+        [ -n "$MODULE_ID" ] && pactl unload-module "$MODULE_ID" 2>/dev/null || true
+      done < "$STATE"
+
+      rm -f "$STATE"
+    fi
+    ;;
+
+  restart)
+    "$0" stop
+    "$0" start
+    ;;
+
+  *)
+    echo "Usage: $0 {start|stop|restart}"
+    exit 1
+    ;;
+esac

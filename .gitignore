@@ -1,0 +1,29 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local environment configuration
+.env
+.env.*
+!.env.example
+
+# Generated audio
+*.mp3
+*.wav
+
+# Local/editor files
+.vscode/
+.idea/
+.DS_Store
+*~
+
+# Logs
+*.log

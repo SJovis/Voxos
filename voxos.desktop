@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Voxos
+Comment=Speak text through Discord and the current audio output
+Exec=/home/jovis/Projects/Voxos/src/voxos.sh
+Icon=/home/jovis/Projects/Voxos/assets/voxos.svg
+Terminal=false
+Categories=AudioVideo;Utility;
+StartupNotify=true
+StartupWMClass=voxos
