@@ -162,4 +162,4 @@ prompt text.
 
 ## License
 
-No license has been chosen yet.
+This project is licensed under the [MIT License](LICENSE).
