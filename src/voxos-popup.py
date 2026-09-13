@@ -7,9 +7,10 @@ import sys
 import tempfile
 
 from PySide6.QtCore import QTimer, Qt
-from PySide6.QtGui import QAction, QActionGroup, QColor, QIcon, QPainter
+from PySide6.QtGui import QAction, QColor, QIcon, QPainter
 from PySide6.QtWidgets import (
     QApplication,
+    QInputDialog,
     QLineEdit,
     QMenu,
     QSystemTrayIcon,
@@ -428,33 +429,38 @@ tray.setToolTip("Voxos")
 tray_menu = QMenu()
 show_action = QAction("Show Voxos", tray_menu)
 show_action.triggered.connect(popup.show_popup)
-volume_menu = QMenu(
-    f"Playback volume ({popup.volume}%)",
+volume_action = QAction(
+    f"Set playback volume ({popup.volume}%)...",
     tray_menu
 )
-volume_group = QActionGroup(volume_menu)
-volume_group.setExclusive(True)
 
 
 def set_volume(volume):
     popup.save_volume(volume)
-    volume_menu.setTitle(f"Playback volume ({volume}%)")
+    volume_action.setText(f"Set playback volume ({volume}%)...")
 
 
-for volume in range(0, 101, 5):
-    volume_action = QAction(f"{volume}%", volume_menu)
-    volume_action.setCheckable(True)
-    volume_action.setChecked(volume == popup.volume)
-    volume_action.triggered.connect(
-        lambda checked=False, value=volume: set_volume(value)
+def choose_volume():
+    volume, accepted = QInputDialog.getInt(
+        popup,
+        "Playback volume",
+        "Volume (%):",
+        popup.volume,
+        0,
+        100,
+        1,
     )
-    volume_group.addAction(volume_action)
-    volume_menu.addAction(volume_action)
+
+    if accepted:
+        set_volume(volume)
+
+
+volume_action.triggered.connect(choose_volume)
 
 quit_action = QAction("Quit Voxos", tray_menu)
 quit_action.triggered.connect(app.quit)
 tray_menu.addAction(show_action)
-tray_menu.addMenu(volume_menu)
+tray_menu.addAction(volume_action)
 tray_menu.addAction(quit_action)
 
 tray.setContextMenu(tray_menu)

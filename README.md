@@ -103,11 +103,11 @@ Running it while Voxos is already open toggles the prompt.
 | Down Arrow | Show a newer prompt |
 | Click backdrop | Dismiss the prompt and save its draft |
 
-Use the **Playback volume** submenu in the tray menu to set Voxos's output
-level in 5% increments. The setting applies to both local monitoring and the
-Discord virtual microphone and is saved in `~/.cache/voxos-volume.txt`. The
-tray menu also includes **Show Voxos** and **Quit Voxos**. Quitting is
-required to stop the tray application completely.
+Use **Set playback volume** in the tray menu to enter any output level from
+0% to 100%. The setting applies to both local monitoring and the Discord
+virtual microphone and is saved in `~/.cache/voxos-volume.txt`. The tray menu
+also includes **Show Voxos** and **Quit Voxos**. Quitting is required to stop
+the tray application completely.
 
 ## Discord Audio Routing
 
