@@ -103,8 +103,11 @@ Running it while Voxos is already open toggles the prompt.
 | Down Arrow | Show a newer prompt |
 | Click backdrop | Dismiss the prompt and save its draft |
 
-The tray menu includes **Show Voxos** and **Quit Voxos**. Quitting is required
-to stop the tray application completely.
+Use the **Playback volume** submenu in the tray menu to set Voxos's output
+level in 5% increments. The setting applies to both local monitoring and the
+Discord virtual microphone and is saved in `~/.cache/voxos-volume.txt`. The
+tray menu also includes **Show Voxos** and **Quit Voxos**. Quitting is
+required to stop the tray application completely.
 
 ## Discord Audio Routing
 
@@ -144,6 +147,7 @@ systemctl --user stop voxos-audio.service
 |---|---|
 | Prompt history | `~/.cache/voxos-history.txt` |
 | Unfinished draft | `~/.cache/voxos-draft.txt` |
+| Playback volume | `~/.cache/voxos-volume.txt` |
 | Launcher PID | `/tmp/voxos-prompt.pid` |
 | PipeWire module IDs | `$XDG_RUNTIME_DIR/voxos-audio.modules` |
 

@@ -7,7 +7,7 @@ import sys
 import tempfile
 
 from PySide6.QtCore import QTimer, Qt
-from PySide6.QtGui import QAction, QColor, QIcon, QPainter
+from PySide6.QtGui import QAction, QActionGroup, QColor, QIcon, QPainter
 from PySide6.QtWidgets import (
     QApplication,
     QLineEdit,
@@ -31,11 +31,18 @@ HISTORY = os.path.join(
     "voxos-history.txt"
 )
 
+VOLUME = os.path.join(
+    HOME,
+    ".cache",
+    "voxos-volume.txt"
+)
+
 PIDFILE = "/tmp/voxos-prompt.pid"
 
 EDGE_TTS = [sys.executable, "-m", "edge_tts"]
 
 VOXOS_SINK = "voxos_output"
+MAX_PULSE_VOLUME = 65_536
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DESKTOP_ICON_PATH = os.path.join(
@@ -110,6 +117,7 @@ class TTSPopup(QLineEdit):
     def __init__(self):
         super().__init__()
 
+        self.volume = self.load_volume()
         self.submitted = False
         self.history = []
         self.history_index = 0
@@ -161,6 +169,25 @@ class TTSPopup(QLineEdit):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.check_toggle)
         self.timer.start(50)
+
+    def load_volume(self):
+        try:
+            with open(VOLUME, "r", encoding="utf-8") as f:
+                volume = int(f.read().strip())
+        except (FileNotFoundError, ValueError):
+            return 100
+
+        return max(0, min(volume, 100))
+
+    def save_volume(self, volume):
+        self.volume = volume
+        os.makedirs(
+            os.path.dirname(VOLUME),
+            exist_ok=True
+        )
+
+        with open(VOLUME, "w", encoding="utf-8") as f:
+            f.write(f"{volume}\n")
 
     def load_history(self):
         try:
@@ -350,6 +377,7 @@ class TTSPopup(QLineEdit):
                 [
                     "paplay",
                     f"--device={VOXOS_SINK}",
+                    f"--volume={self.volume * MAX_PULSE_VOLUME // 100}",
                     wav.name,
                 ]
             )
@@ -358,6 +386,7 @@ class TTSPopup(QLineEdit):
                 [
                     "paplay",
                     f"--device={default_sink}",
+                    f"--volume={self.volume * MAX_PULSE_VOLUME // 100}",
                     wav.name,
                 ]
             )
@@ -399,10 +428,33 @@ tray.setToolTip("Voxos")
 tray_menu = QMenu()
 show_action = QAction("Show Voxos", tray_menu)
 show_action.triggered.connect(popup.show_popup)
+volume_menu = QMenu(
+    f"Playback volume ({popup.volume}%)",
+    tray_menu
+)
+volume_group = QActionGroup(volume_menu)
+volume_group.setExclusive(True)
+
+
+def set_volume(volume):
+    popup.save_volume(volume)
+    volume_menu.setTitle(f"Playback volume ({volume}%)")
+
+
+for volume in range(0, 101, 5):
+    volume_action = QAction(f"{volume}%", volume_menu)
+    volume_action.setCheckable(True)
+    volume_action.setChecked(volume == popup.volume)
+    volume_action.triggered.connect(
+        lambda checked=False, value=volume: set_volume(value)
+    )
+    volume_group.addAction(volume_action)
+    volume_menu.addAction(volume_action)
+
 quit_action = QAction("Quit Voxos", tray_menu)
 quit_action.triggered.connect(app.quit)
 tray_menu.addAction(show_action)
-tray_menu.addSeparator()
+tray_menu.addMenu(volume_menu)
 tray_menu.addAction(quit_action)
 
 tray.setContextMenu(tray_menu)
