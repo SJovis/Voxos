@@ -64,6 +64,10 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 ```
 
+`requirements.txt` is a locked Linux x86_64 dependency set. Pip verifies the
+published hash for each package during installation; update versions and hashes
+together when refreshing dependencies.
+
 Install the desktop entry, PipeWire helper, and user service:
 
 ```bash
@@ -145,9 +149,9 @@ systemctl --user stop voxos-audio.service
 
 | Data | Location |
 |---|---|
-| Prompt history | `~/.cache/voxos-history.txt` |
-| Unfinished draft | `~/.cache/voxos-draft.txt` |
-| Playback volume | `~/.cache/voxos-volume.txt` |
+| Prompt history | `${XDG_CACHE_HOME:-~/.cache}/voxos/voxos-history.txt` |
+| Unfinished draft | `${XDG_CACHE_HOME:-~/.cache}/voxos/voxos-draft.txt` |
+| Playback volume | `${XDG_CACHE_HOME:-~/.cache}/voxos/voxos-volume.txt` |
 | Launcher PID | `/tmp/voxos-prompt.pid` |
 | PipeWire module IDs | `$XDG_RUNTIME_DIR/voxos-audio.modules` |
 
@@ -156,7 +160,8 @@ systemctl --user stop voxos-audio.service
 The UI, history, audio conversion, and PipeWire routing are local. Prompt text
 is sent to Microsoft's Edge TTS service to generate speech. Discord receives
 the generated audio through the Voxos virtual microphone, not the original
-prompt text.
+prompt text. Voxos stores local state in an owner-only cache directory and
+creates its state files with owner-only permissions.
 
 ## Current Limitations
 

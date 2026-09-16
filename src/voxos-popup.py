@@ -20,22 +20,17 @@ from PySide6.QtWidgets import (
 
 HOME = os.path.expanduser("~")
 
-DRAFT = os.path.join(
-    HOME,
-    ".cache",
-    "voxos-draft.txt"
+CACHE_DIR = os.path.join(
+    os.environ.get("XDG_CACHE_HOME", os.path.join(HOME, ".cache")),
+    "voxos",
 )
-
-HISTORY = os.path.join(
-    HOME,
-    ".cache",
-    "voxos-history.txt"
-)
-
-VOLUME = os.path.join(
-    HOME,
-    ".cache",
-    "voxos-volume.txt"
+DRAFT = os.path.join(CACHE_DIR, "voxos-draft.txt")
+HISTORY = os.path.join(CACHE_DIR, "voxos-history.txt")
+VOLUME = os.path.join(CACHE_DIR, "voxos-volume.txt")
+LEGACY_FILES = (
+    (os.path.join(HOME, ".cache", "voxos-draft.txt"), DRAFT),
+    (os.path.join(HOME, ".cache", "voxos-history.txt"), HISTORY),
+    (os.path.join(HOME, ".cache", "voxos-volume.txt"), VOLUME),
 )
 
 PIDFILE = "/tmp/voxos-prompt.pid"
@@ -58,6 +53,43 @@ TRAY_ICON_PATH = os.path.join(
 )
 
 toggle_requested = False
+
+
+def ensure_private_cache_dir():
+    os.makedirs(CACHE_DIR, mode=0o700, exist_ok=True)
+    os.chmod(CACHE_DIR, 0o700)
+
+
+def write_private_text(path, text):
+    ensure_private_cache_dir()
+    fd = os.open(
+        path,
+        os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+        0o600,
+    )
+    try:
+        os.fchmod(fd, 0o600)
+    except OSError:
+        os.close(fd)
+        raise
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(text)
+
+
+def migrate_legacy_cache_files():
+    for legacy_path, private_path in LEGACY_FILES:
+        try:
+            with open(legacy_path, "r", encoding="utf-8") as f:
+                contents = f.read()
+        except FileNotFoundError:
+            continue
+
+        if os.path.exists(private_path):
+            os.remove(legacy_path)
+            continue
+
+        write_private_text(private_path, contents)
+        os.remove(legacy_path)
 
 
 def remove_pidfile():
@@ -182,13 +214,7 @@ class TTSPopup(QLineEdit):
 
     def save_volume(self, volume):
         self.volume = volume
-        os.makedirs(
-            os.path.dirname(VOLUME),
-            exist_ok=True
-        )
-
-        with open(VOLUME, "w", encoding="utf-8") as f:
-            f.write(f"{volume}\n")
+        write_private_text(VOLUME, f"{volume}\n")
 
     def load_history(self):
         try:
@@ -204,11 +230,6 @@ class TTSPopup(QLineEdit):
         self.history_index = len(self.history)
 
     def save_history_entry(self, text):
-        os.makedirs(
-            os.path.dirname(HISTORY),
-            exist_ok=True
-        )
-
         # Avoid immediately duplicating the same prompt
         if self.history and self.history[-1] == text:
             return
@@ -218,20 +239,15 @@ class TTSPopup(QLineEdit):
         # Keep only the most recent 100 prompts
         self.history = self.history[-100:]
 
-        with open(HISTORY, "w", encoding="utf-8") as f:
-            for entry in self.history:
-                f.write(entry.replace("\n", " ") + "\n")
+        write_private_text(
+            HISTORY,
+            "".join(entry.replace("\n", " ") + "\n" for entry in self.history),
+        )
 
         self.history_index = len(self.history)
 
     def save_draft(self):
-        os.makedirs(
-            os.path.dirname(DRAFT),
-            exist_ok=True
-        )
-
-        with open(DRAFT, "w", encoding="utf-8") as f:
-            f.write(self.text())
+        write_private_text(DRAFT, self.text())
 
     def check_toggle(self):
         global toggle_requested
@@ -418,6 +434,8 @@ signal.signal(
 app = QApplication([])
 app.setDesktopFileName("voxos")
 app.setQuitOnLastWindowClosed(False)
+
+migrate_legacy_cache_files()
 
 popup = TTSPopup()
 focus_overlay = FocusOverlay(popup)
