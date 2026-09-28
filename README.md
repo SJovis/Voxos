@@ -16,6 +16,8 @@ This project was developed with assistance from AI tools.
 - Stays available in the system tray after the prompt is dismissed.
 - Uses a rounded, padded prompt with a dimmed backdrop.
 - Saves unfinished drafts and keeps the latest 100 prompts as history.
+- Checks spelling in Portuguese by default, with English selectable from the
+  tray menu.
 - Dismisses the prompt with Escape, the global shortcut, or a backdrop click.
 - Sends generated speech to both the active local audio output and Discord.
 - Selects the local output dynamically with `pactl get-default-sink`.
@@ -109,9 +111,13 @@ Running it while Voxos is already open toggles the prompt.
 
 Use **Set playback volume** in the tray menu to enter any output level from
 0% to 100%. The setting applies to both local monitoring and the Discord
-virtual microphone and is saved in `~/.cache/voxos-volume.txt`. The tray menu
-also includes **Show Voxos** and **Quit Voxos**. Quitting is required to stop
-the tray application completely.
+virtual microphone and is saved in `~/.cache/voxos/voxos-volume.txt`. Use
+**Spell check language** to switch between Portuguese and English; misspelled
+words are underlined in red and offer replacements from the right-click menu.
+The selected language is saved in
+`~/.cache/voxos/voxos-spellcheck-language.txt`. The tray menu also includes
+**Show Voxos** and **Quit Voxos**. Quitting is required to stop the tray
+application completely.
 
 ## Discord Audio Routing
 
@@ -152,6 +158,7 @@ systemctl --user stop voxos-audio.service
 | Prompt history | `${XDG_CACHE_HOME:-~/.cache}/voxos/voxos-history.txt` |
 | Unfinished draft | `${XDG_CACHE_HOME:-~/.cache}/voxos/voxos-draft.txt` |
 | Playback volume | `${XDG_CACHE_HOME:-~/.cache}/voxos/voxos-volume.txt` |
+| Spell check language | `${XDG_CACHE_HOME:-~/.cache}/voxos/voxos-spellcheck-language.txt` |
 | Launcher PID | `/tmp/voxos-prompt.pid` |
 | PipeWire module IDs | `$XDG_RUNTIME_DIR/voxos-audio.modules` |
 
