@@ -22,10 +22,11 @@ This project was developed with assistance from AI tools.
 - Sends generated speech to both the active local audio output and Discord.
 - Selects the local output dynamically with `pactl get-default-sink`.
 
-The default voice configuration is:
+The voice follows the selected spell-check language:
 
 ```text
-Voice: pt-PT-DuarteNeural
+Portuguese: pt-PT-DuarteNeural
+English:    en-US-ChristopherNeural
 Rate:  +5%
 Pitch: -18Hz
 ```
@@ -114,6 +115,8 @@ Use **Set playback volume** in the tray menu to enter any output level from
 virtual microphone and is saved in `~/.cache/voxos/voxos-volume.txt`. Use
 **Spell check language** to switch between Portuguese and English; misspelled
 words are underlined in red and offer replacements from the right-click menu.
+The speech voice changes with this setting, using Portuguese male speech for
+Portuguese and English male speech for English.
 The selected language is saved in
 `~/.cache/voxos/voxos-spellcheck-language.txt`. The tray menu also includes
 **Show Voxos** and **Quit Voxos**. Quitting is required to stop the tray
@@ -177,7 +180,7 @@ creates its state files with owner-only permissions.
 - Microsoft Edge TTS requires an internet connection.
 - Failures from edge-tts, ffmpeg, PipeWire, and paplay have limited GUI
   feedback.
-- Voice, rate, pitch, and history behavior are not configurable yet.
+- Rate, pitch, and history behavior are not configurable yet.
 
 ## License
 
