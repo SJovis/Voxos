@@ -56,6 +56,10 @@ SPELLCHECK_LANGUAGES = {
     "pt": "Portuguese",
     "en": "English",
 }
+VOICE_BY_LANGUAGE = {
+    "pt": "pt-PT-DuarteNeural",
+    "en": "en-US-ChristopherNeural",
+}
 WORD_PATTERN = re.compile(
     r"[^\W\d_]+(?:['\u2019-][^\W\d_]+)*",
     re.UNICODE,
@@ -295,6 +299,7 @@ class TTSPopup(SpellCheckLineEdit):
 
         self.volume = self.load_volume()
         self.spellcheck_language = spellcheck_language
+        self.voice = VOICE_BY_LANGUAGE[spellcheck_language]
         self.submitted = False
         self.history = []
         self.history_index = 0
@@ -363,6 +368,7 @@ class TTSPopup(SpellCheckLineEdit):
     def set_spellcheck_language(self, language):
         super().set_spellcheck_language(language)
         self.spellcheck_language = language
+        self.voice = VOICE_BY_LANGUAGE[language]
         write_private_text(SPELLCHECK_LANGUAGE, f"{language}\n")
 
     def load_history(self):
@@ -513,7 +519,7 @@ class TTSPopup(SpellCheckLineEdit):
                 [
                     *EDGE_TTS,
                     "--voice",
-                    "pt-PT-DuarteNeural",
+                    self.voice,
                     "--rate=+5%",
                     "--pitch=-18Hz",
                     "--text",
