@@ -24,6 +24,8 @@ PySide6_Addons==6.11.2 \
     --hash=sha256:a8b00956925fbdeffc7052cf933506391289f35ac4f3f71a0a167ec195cd47b4
 PySide6_Essentials==6.11.2 \
     --hash=sha256:aaf9f25f0f324874085fa5b26a610318db8a8e243cf85bb3e5400595191c7778
+pyspellchecker==0.9.0 \
+    --hash=sha256:97eaed776e0854f69aafb723f6962b403099e50c9a1d9c05525c819f4b0f5d54
 shiboken6==6.11.2 \
     --hash=sha256:7a7a0a72a9ed26c9bf77d42246b1c736486befb8f31aa2fb29957ea4cdd1c1c2
 tabulate==0.10.0 \

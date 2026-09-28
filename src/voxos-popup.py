@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 
 import os
+import re
 import signal
 import subprocess
 import sys
 import tempfile
+import unicodedata
 
 from PySide6.QtCore import QTimer, Qt
-from PySide6.QtGui import QAction, QColor, QIcon, QPainter
+from PySide6.QtGui import (
+    QAction,
+    QActionGroup,
+    QColor,
+    QIcon,
+    QPainter,
+)
 from PySide6.QtWidgets import (
     QApplication,
     QInputDialog,
@@ -16,6 +24,7 @@ from PySide6.QtWidgets import (
     QSystemTrayIcon,
     QWidget,
 )
+from spellchecker import SpellChecker
 
 
 HOME = os.path.expanduser("~")
@@ -27,6 +36,10 @@ CACHE_DIR = os.path.join(
 DRAFT = os.path.join(CACHE_DIR, "voxos-draft.txt")
 HISTORY = os.path.join(CACHE_DIR, "voxos-history.txt")
 VOLUME = os.path.join(CACHE_DIR, "voxos-volume.txt")
+SPELLCHECK_LANGUAGE = os.path.join(
+    CACHE_DIR,
+    "voxos-spellcheck-language.txt",
+)
 LEGACY_FILES = (
     (os.path.join(HOME, ".cache", "voxos-draft.txt"), DRAFT),
     (os.path.join(HOME, ".cache", "voxos-history.txt"), HISTORY),
@@ -39,6 +52,14 @@ EDGE_TTS = [sys.executable, "-m", "edge_tts"]
 
 VOXOS_SINK = "voxos_output"
 MAX_PULSE_VOLUME = 65_536
+SPELLCHECK_LANGUAGES = {
+    "pt": "Portuguese",
+    "en": "English",
+}
+WORD_PATTERN = re.compile(
+    r"[^\W\d_]+(?:['\u2019-][^\W\d_]+)*",
+    re.UNICODE,
+)
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DESKTOP_ICON_PATH = os.path.join(
@@ -119,6 +140,24 @@ def signal_toggle(signum, frame):
     toggle_requested = True
 
 
+def load_spellcheck_language():
+    try:
+        with open(SPELLCHECK_LANGUAGE, "r", encoding="utf-8") as f:
+            language = f.read().strip()
+    except FileNotFoundError:
+        return "pt"
+
+    return language if language in SPELLCHECK_LANGUAGES else "pt"
+
+
+def remove_accents(word):
+    return "".join(
+        character
+        for character in unicodedata.normalize("NFD", word)
+        if not unicodedata.combining(character)
+    )
+
+
 class FocusOverlay(QWidget):
     def __init__(self, popup):
         super().__init__()
@@ -146,11 +185,116 @@ class FocusOverlay(QWidget):
         painter.fillRect(self.rect(), QColor(0, 0, 0, 160))
 
 
-class TTSPopup(QLineEdit):
+class SpellCheckLineEdit(QLineEdit):
+    def __init__(self, language, parent=None):
+        super().__init__(parent)
+        self.spellchecker = None
+        SpellCheckLineEdit.set_spellcheck_language(self, language)
+        self.textChanged.connect(self.update)
+
+    def set_spellcheck_language(self, language):
+        self.spellchecker = SpellChecker(language=language)
+        self.update()
+
+    def misspelled_words(self):
+        words = [
+            match.group()
+            for match in WORD_PATTERN.finditer(self.text())
+        ]
+        unknown_words = self.spellchecker.unknown(words)
+        return [
+            match
+            for match in WORD_PATTERN.finditer(self.text())
+            if match.group().lower() in unknown_words
+        ]
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+
+        if not self.text():
+            return
+
+        painter = QPainter(self)
+        painter.setPen(QColor("#ef4444"))
+        font_metrics = self.fontMetrics()
+        cursor_rect = self.cursorRect()
+        left = cursor_rect.x() - font_metrics.horizontalAdvance(
+            self.text()[:self.cursorPosition()]
+        )
+        baseline = min(
+            cursor_rect.bottom() + 1,
+            self.contentsRect().bottom() - 2,
+        )
+
+        for match in self.misspelled_words():
+            start = left + font_metrics.horizontalAdvance(
+                self.text()[:match.start()]
+            )
+            end = left + font_metrics.horizontalAdvance(
+                self.text()[:match.end()]
+            )
+            painter.drawLine(start, baseline, end, baseline)
+
+    def contextMenuEvent(self, event):
+        menu = self.createStandardContextMenu()
+        cursor_position = self.cursorPositionAt(event.pos())
+        selected_word = next(
+            (
+                match
+                for match in self.misspelled_words()
+                if match.start() <= cursor_position <= match.end()
+            ),
+            None,
+        )
+
+        if selected_word:
+            menu.addSeparator()
+            word = selected_word.group()
+            normalized_word = remove_accents(word.lower())
+            suggestions = sorted(
+                self.spellchecker.candidates(word),
+                key=lambda suggestion: (
+                    remove_accents(suggestion.lower()) != normalized_word,
+                    -self.spellchecker.word_usage_frequency(suggestion),
+                    suggestion,
+                ),
+            )[:5]
+            if suggestions:
+                for suggestion in suggestions:
+                    action = QAction(
+                        f"Replace with '{suggestion}'",
+                        menu,
+                    )
+                    action.triggered.connect(
+                        lambda checked=False,
+                        start=selected_word.start(),
+                        length=len(selected_word.group()),
+                        replacement=suggestion: self.replace_word(
+                            start,
+                            length,
+                            replacement,
+                        )
+                    )
+                    menu.addAction(action)
+            else:
+                no_suggestions = QAction("No spelling suggestions", menu)
+                no_suggestions.setEnabled(False)
+                menu.addAction(no_suggestions)
+
+        menu.exec(event.globalPos())
+
+    def replace_word(self, start, length, replacement):
+        self.setSelection(start, length)
+        self.insert(replacement)
+
+
+class TTSPopup(SpellCheckLineEdit):
     def __init__(self):
-        super().__init__()
+        spellcheck_language = load_spellcheck_language()
+        super().__init__(spellcheck_language)
 
         self.volume = self.load_volume()
+        self.spellcheck_language = spellcheck_language
         self.submitted = False
         self.history = []
         self.history_index = 0
@@ -215,6 +359,11 @@ class TTSPopup(QLineEdit):
     def save_volume(self, volume):
         self.volume = volume
         write_private_text(VOLUME, f"{volume}\n")
+
+    def set_spellcheck_language(self, language):
+        super().set_spellcheck_language(language)
+        self.spellcheck_language = language
+        write_private_text(SPELLCHECK_LANGUAGE, f"{language}\n")
 
     def load_history(self):
         try:
@@ -474,6 +623,30 @@ def choose_volume():
 
 
 volume_action.triggered.connect(choose_volume)
+
+spellcheck_menu = tray_menu.addMenu("Spell check language")
+spellcheck_language_group = QActionGroup(spellcheck_menu)
+spellcheck_language_group.setExclusive(True)
+spellcheck_language_actions = {}
+
+
+def set_spellcheck_language(language):
+    popup.set_spellcheck_language(language)
+    spellcheck_language_actions[language].setChecked(True)
+
+
+for language, name in SPELLCHECK_LANGUAGES.items():
+    language_action = QAction(name, spellcheck_menu)
+    language_action.setCheckable(True)
+    language_action.setChecked(language == popup.spellcheck_language)
+    language_action.triggered.connect(
+        lambda checked, selected_language=language: (
+            set_spellcheck_language(selected_language) if checked else None
+        )
+    )
+    spellcheck_language_group.addAction(language_action)
+    spellcheck_menu.addAction(language_action)
+    spellcheck_language_actions[language] = language_action
 
 quit_action = QAction("Quit Voxos", tray_menu)
 quit_action.triggered.connect(app.quit)
